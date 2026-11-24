@@ -417,13 +417,57 @@ function updateEvent(int $id): never
     respond(409, ['error' => 'El evento está cancelado o la capacidad es menor que la cantidad de entradas vendidas.']);
 }
 
+function getSalesReport(?int $eventId = null): never
+{
+    $user = requireUser(true);
+    if ($user['role'] !== 'admin') {
+        respond(403, ['error' => 'Se requieren permisos de administrador.']);
+    }
+
+    $db = connectDatabase();
+
+    if ($eventId === null) {
+        $report = $db->query(
+            "SELECT COUNT(*) AS purchase_count,
+                    COALESCE(SUM(quantity), 0) AS tickets_sold,
+                    COALESCE(SUM(total_amount), 0.00)::text AS total_revenue
+             FROM ticket_sales
+             WHERE status = 'confirmed'"
+        )->fetch(PDO::FETCH_ASSOC);
+    } else {
+        $statement = $db->prepare(
+            "SELECT e.id AS event_id, e.name AS event_name,
+                    COUNT(s.id) AS purchase_count,
+                    COALESCE(SUM(s.quantity), 0) AS tickets_sold,
+                    COALESCE(SUM(s.total_amount), 0.00)::text AS total_revenue
+             FROM events AS e
+             LEFT JOIN ticket_sales AS s
+                 ON s.event_id = e.id AND s.status = 'confirmed'
+             WHERE e.id = :id
+             GROUP BY e.id, e.name"
+        );
+        $statement->execute(['id' => $eventId]);
+        $report = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if ($report === false) {
+            respond(404, ['error' => 'Evento no encontrado.']);
+        }
+    }
+
+    header('Cache-Control: no-store');
+    respond(200, $report);
+}
+
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
 $eventRoute = preg_match('~^/events/([1-9][0-9]*)(/availability|/status)?$~D', $path, $matches) === 1;
 
 $statusRoute = $eventRoute && ($matches[2] ?? '') === '/status';
 
+$salesRoute = preg_match('~^/reports/events/([1-9][0-9]*)/sales$~D', $path, $reportMatches) === 1;
+
 $allowedMethods = match (true) {
+    $salesRoute || $path === '/reports/sales/summary' => ['GET'],
     $statusRoute => ['PATCH'],
     $eventRoute && !isset($matches[2]) => ['GET', 'PUT'],
     $path === '/purchases' => ['GET', 'POST'],
@@ -442,6 +486,17 @@ if (!in_array($method, $allowedMethods, true)) {
 }
 
 try {
+    if ($salesRoute) {
+        $reportEventId = filter_var($reportMatches[1], FILTER_VALIDATE_INT);
+        if ($reportEventId === false) {
+            respond(404, ['error' => 'Evento no encontrado.']);
+        }
+        getSalesReport($reportEventId);
+    }
+    if ($path === '/reports/sales/summary') {
+        getSalesReport();
+    }
+
     if ($eventRoute) {
         $id = filter_var($matches[1], FILTER_VALIDATE_INT);
         if ($id === false) {

@@ -2,7 +2,10 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY Ticketing.Reports.csproj .
 RUN dotnet restore
-COPY *.cs .
+COPY Program.cs .
+COPY Api/ Api/
+COPY Application/ Application/
+COPY Infrastructure/ Infrastructure/
 RUN dotnet publish -c Release --no-restore -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0

@@ -1,6 +1,6 @@
-﻿services:
+services:
   reports:
-    build: ./reports
+    build: ./reporting-api
     environment:
       ASPNETCORE_HTTP_PORTS: "8080"
       PhpApi__BaseUrl: "http://api/"
@@ -11,7 +11,7 @@
       - "127.0.0.1:8081:8080"
 
   api:
-    build: ./php
+    build: ./ticketing-api
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configura POSTGRES_PASSWORD en .env}
     depends_on:

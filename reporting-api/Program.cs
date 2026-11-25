@@ -13,5 +13,6 @@ builder.Services.AddHttpClient<IReportsGateway, TicketingClient>(client =>
 });
 
 var app = builder.Build();
+app.UseStaticFiles();
 app.MapReportEndpoints();
 app.Run();

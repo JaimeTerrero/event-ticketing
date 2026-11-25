@@ -1,0 +1,1305 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "API de venta de entradas",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8080",
+      "description": "Docker Compose local"
+    }
+  ],
+  "paths": {
+    "/health.php": {
+      "get": {
+        "tags": [
+          "Estado"
+        ],
+        "operationId": "checkHealth",
+        "summary": "Comprobar la conexión a PostgreSQL",
+        "responses": {
+          "200": {
+            "description": "Solicitud completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "PostgreSQL no está disponible.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthUnavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "operationId": "register",
+        "summary": "Registrar una cuenta de cliente",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recurso creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadJson"
+          },
+          "409": {
+            "description": "El correo electrónico ya está registrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "El correo electrónico ya está registrado."
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Validation"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "operationId": "login",
+        "summary": "Iniciar sesión",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadJson"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidCredentials"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "Autenticación"
+        ],
+        "operationId": "getCurrentUser",
+        "summary": "Consultar la cuenta autenticada",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/events": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "operationId": "listEvents",
+        "summary": "Listar eventos publicados",
+        "responses": {
+          "200": {
+            "description": "Solicitud completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventList"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Eventos"
+        ],
+        "operationId": "createEvent",
+        "summary": "Crear un evento en borrador",
+        "description": "Requiere un token Bearer de una cuenta con rol de administrador.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recurso creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadJson"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/Validation"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/events/{id}": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "operationId": "getEvent",
+        "summary": "Consultar un evento publicado",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Eventos"
+        ],
+        "operationId": "updateEvent",
+        "summary": "Actualizar los datos de un evento",
+        "description": "Requiere un token Bearer de una cuenta con rol de administrador. La capacidad se ajusta conservando las ventas ya registradas.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadJson"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "El evento está cancelado o la capacidad es menor que la cantidad de entradas vendidas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "El evento está cancelado o la capacidad es menor que la cantidad de entradas vendidas."
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Validation"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/events/{id}/availability": {
+      "get": {
+        "tags": [
+          "Eventos"
+        ],
+        "operationId": "getAvailability",
+        "summary": "Consultar las entradas disponibles",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Availability"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/events/{id}/status": {
+      "patch": {
+        "tags": [
+          "Eventos"
+        ],
+        "operationId": "updateEventStatus",
+        "summary": "Publicar o cancelar un evento",
+        "description": "Requiere un token Bearer de una cuenta con rol de administrador. Para publicar, el evento debe estar en borrador y la fecha debe ser futura. La cancelación es definitiva.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadJson"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "No se permite este cambio de estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "No se permite este cambio de estado."
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Validation"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/purchases": {
+      "get": {
+        "tags": [
+          "Compras"
+        ],
+        "operationId": "listPurchases",
+        "summary": "Consultar el historial de compras propio",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Compras"
+        ],
+        "operationId": "createPurchase",
+        "summary": "Comprar entradas",
+        "description": "Registra la venta y descuenta las entradas de forma atómica. El precio se lee del evento.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recurso creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Purchase"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadJson"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "El evento o la cantidad de entradas solicitada no están disponibles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "El evento o la cantidad de entradas solicitada no están disponibles."
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Validation"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/reports/events/{id}/sales": {
+      "get": {
+        "tags": [
+          "Ventas"
+        ],
+        "operationId": "getEventSales",
+        "summary": "Consultar ventas confirmadas de un evento",
+        "description": "Requiere un token Bearer de una cuenta con rol de administrador.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventSales"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/reports/sales/summary": {
+      "get": {
+        "tags": [
+          "Ventas"
+        ],
+        "operationId": "getSalesSummary",
+        "summary": "Consultar el resumen de ventas confirmadas",
+        "description": "Requiere un token Bearer de una cuenta con rol de administrador.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Token de acceso obtenido en POST /auth/login de la API de venta de entradas."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "event_date",
+          "total_tickets",
+          "ticket_price",
+          "available_tickets",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "example": "Concierto de verano"
+          },
+          "description": {
+            "type": "string",
+            "example": "Evento de prueba"
+          },
+          "event_date": {
+            "type": "string",
+            "example": "2027-06-15 23:30:00+00",
+            "description": "Fecha y hora con zona horaria devuelta por PostgreSQL."
+          },
+          "total_tickets": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "example": 120
+          },
+          "ticket_price": {
+            "type": "string",
+            "example": "1500.00",
+            "pattern": "^[0-9]+\\.[0-9]{2}$"
+          },
+          "available_tickets": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0,
+            "example": 118
+          },
+          "status": {
+            "type": "string",
+            "example": "published",
+            "enum": [
+              "draft",
+              "published",
+              "cancelled"
+            ]
+          }
+        }
+      },
+      "EventList": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            }
+          }
+        }
+      },
+      "SalesSummary": {
+        "type": "object",
+        "required": [
+          "purchase_count",
+          "tickets_sold",
+          "total_revenue"
+        ],
+        "properties": {
+          "purchase_count": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "example": 1
+          },
+          "tickets_sold": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "example": 2
+          },
+          "total_revenue": {
+            "type": "string",
+            "example": "3000.00",
+            "pattern": "^[0-9]+\\.[0-9]{2}$"
+          }
+        }
+      },
+      "EventSales": {
+        "type": "object",
+        "required": [
+          "event_id",
+          "event_name",
+          "purchase_count",
+          "tickets_sold",
+          "total_revenue"
+        ],
+        "properties": {
+          "event_id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "example": 1
+          },
+          "event_name": {
+            "type": "string",
+            "example": "Concierto de verano"
+          },
+          "purchase_count": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "example": 1
+          },
+          "tickets_sold": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "example": 2
+          },
+          "total_revenue": {
+            "type": "string",
+            "example": "3000.00",
+            "pattern": "^[0-9]+\\.[0-9]{2}$"
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok",
+            "enum": [
+              "ok"
+            ]
+          }
+        }
+      },
+      "HealthUnavailable": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "unavailable",
+            "enum": [
+              "unavailable"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "example": "Base de datos no disponible."
+          }
+        }
+      },
+      "RegisterInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "password"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Usuario Demo",
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "example": "demo@example.test",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "example": "ClaveDeEjemplo-2027!",
+            "format": "password",
+            "writeOnly": true,
+            "description": "Debe tener entre 12 y 72 bytes."
+          }
+        }
+      },
+      "LoginInput": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "demo@example.test",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "example": "ClaveDeEjemplo-2027!",
+            "format": "password",
+            "writeOnly": true,
+            "description": "Debe tener entre 12 y 72 bytes."
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "example": "Usuario Demo"
+          },
+          "email": {
+            "type": "string",
+            "example": "demo@example.test",
+            "format": "email"
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2027-06-15 23:30:00+00",
+            "description": "Fecha y hora con zona horaria devuelta por PostgreSQL."
+          }
+        }
+      },
+      "Session": {
+        "type": "object",
+        "required": [
+          "access_token",
+          "token_type",
+          "expires_in"
+        ],
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "example": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "token_type": {
+            "type": "string",
+            "example": "Bearer",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "example": 86400
+          }
+        }
+      },
+      "EventInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "event_date",
+          "total_tickets",
+          "ticket_price"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Concierto de verano",
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "example": "Evento de prueba",
+            "maxLength": 5000
+          },
+          "event_date": {
+            "type": "string",
+            "example": "2027-06-15T19:30:00-04:00",
+            "format": "date-time",
+            "description": "Fecha futura. Usa un desfase UTC numérico, como -04:00 o +00:00."
+          },
+          "total_tickets": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "example": 120
+          },
+          "ticket_price": {
+            "type": "string",
+            "example": "1500.00",
+            "pattern": "^(?:0|[1-9][0-9]{0,7})\\.[0-9]{2}$",
+            "description": "Importe positivo representado como texto con dos decimales."
+          }
+        }
+      },
+      "Availability": {
+        "type": "object",
+        "required": [
+          "event_id",
+          "available_tickets"
+        ],
+        "properties": {
+          "event_id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "example": 1
+          },
+          "available_tickets": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0,
+            "example": 118
+          }
+        }
+      },
+      "StatusInput": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "published",
+            "enum": [
+              "published",
+              "cancelled"
+            ]
+          }
+        }
+      },
+      "EventStatus": {
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "example": 1
+          },
+          "status": {
+            "type": "string",
+            "example": "published",
+            "enum": [
+              "draft",
+              "published",
+              "cancelled"
+            ]
+          }
+        }
+      },
+      "PurchaseInput": {
+        "type": "object",
+        "required": [
+          "event_id",
+          "quantity"
+        ],
+        "properties": {
+          "event_id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "example": 1
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "example": 2
+          }
+        }
+      },
+      "Purchase": {
+        "type": "object",
+        "required": [
+          "id",
+          "event_id",
+          "quantity",
+          "total_amount",
+          "purchase_date",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "example": 1
+          },
+          "event_id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "example": 1
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "example": 2
+          },
+          "total_amount": {
+            "type": "string",
+            "example": "3000.00",
+            "pattern": "^[0-9]+\\.[0-9]{2}$"
+          },
+          "purchase_date": {
+            "type": "string",
+            "example": "2027-06-15 23:30:00+00",
+            "description": "Fecha y hora con zona horaria devuelta por PostgreSQL."
+          },
+          "status": {
+            "type": "string",
+            "example": "confirmed",
+            "enum": [
+              "confirmed"
+            ]
+          }
+        }
+      },
+      "PurchaseRecord": {
+        "type": "object",
+        "required": [
+          "id",
+          "event_id",
+          "quantity",
+          "total_amount",
+          "purchase_date",
+          "status",
+          "event_name"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "example": 1
+          },
+          "event_id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "example": 1
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "example": 2
+          },
+          "total_amount": {
+            "type": "string",
+            "example": "3000.00",
+            "pattern": "^[0-9]+\\.[0-9]{2}$"
+          },
+          "purchase_date": {
+            "type": "string",
+            "example": "2027-06-15 23:30:00+00",
+            "description": "Fecha y hora con zona horaria devuelta por PostgreSQL."
+          },
+          "status": {
+            "type": "string",
+            "example": "confirmed",
+            "enum": [
+              "confirmed"
+            ]
+          },
+          "event_name": {
+            "type": "string",
+            "example": "Concierto de verano"
+          }
+        }
+      },
+      "PurchaseList": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseRecord"
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadJson": {
+        "description": "El cuerpo debe ser un objeto JSON válido.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "JSON no válido."
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Se requiere el rol de administrador.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Se requieren permisos de administrador."
+            }
+          }
+        }
+      },
+      "Internal": {
+        "description": "Error interno del servicio.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Error interno del servidor."
+            }
+          }
+        }
+      },
+      "InvalidCredentials": {
+        "description": "Credenciales incorrectas.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Correo electrónico o contraseña incorrectos."
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Evento no encontrado.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Evento no encontrado."
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "El token falta, es inválido o ha expirado.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Se requiere autenticación."
+            }
+          }
+        },
+        "headers": {
+          "WWW-Authenticate": {
+            "description": "Tipo de autenticación requerido.",
+            "schema": {
+              "type": "string",
+              "example": "Bearer"
+            }
+          }
+        }
+      },
+      "Validation": {
+        "description": "Uno o más datos incumplen las reglas de validación.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}

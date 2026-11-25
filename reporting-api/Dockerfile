@@ -6,6 +6,7 @@ COPY Program.cs .
 COPY Api/ Api/
 COPY Application/ Application/
 COPY Infrastructure/ Infrastructure/
+COPY wwwroot/ wwwroot/
 RUN dotnet publish -c Release --no-restore -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0

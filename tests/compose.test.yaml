@@ -1,0 +1,11 @@
+services:
+  api:
+    ports: !override
+      - target: 80
+        host_ip: 127.0.0.1
+  reports:
+    ports: !override
+      - target: 8080
+        host_ip: 127.0.0.1
+  db:
+    ports: !reset []

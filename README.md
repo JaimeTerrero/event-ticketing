@@ -1,6 +1,8 @@
 # Event Ticketing
 
-API para publicar eventos, vender entradas y consultar ventas. El proyecto tiene dos servicios que se comunican por HTTP y una base de datos PostgreSQL.
+Sistema backend para publicar eventos, vender entradas y consultar ventas. La API de reportes obtiene sus datos por HTTP de la API de venta de entradas.
+
+[Arranque local](#arranque-local) · [Demostración](#demostración) · [OpenAPI](#openapi) · [Pruebas automatizadas](#pruebas-automatizadas)
 
 | Componente | Qué hace | Dirección local |
 | --- | --- | --- |
@@ -41,7 +43,7 @@ Invoke-RestMethod http://127.0.0.1:8081/reports/events
 
 La primera consulta devuelve `status: ok`. La segunda devuelve un catálogo con `items` vacío si todavía no hay eventos publicados. Para detener los contenedores y conservar los datos, usa `docker compose down`.
 
-## Documentación de las APIs
+## OpenAPI
 
 | Servicio | Contrato OpenAPI |
 | --- | --- |
@@ -50,13 +52,15 @@ La primera consulta devuelve `status: ok`. La segunda devuelve un catálogo con 
 
 Puedes importar cualquiera de los archivos en Postman. Para una ruta protegida, usa el `access_token` de `POST /auth/login` como **Bearer Token**. Los reportes de ventas y las operaciones de administración de eventos requieren el rol `admin`.
 
-## Demostración de compra y reporte
+## Demostración
 
-Ejecuta este bloque sobre la base recién migrada. Crea dos cuentas de demostración y asigna el rol de administrador a una de ellas.
+La demostración parte de una base recién migrada. Publica un evento con tres entradas, compra dos y confirma que .NET refleja la venta.
+
+### 1. Preparar las cuentas
 
 ```powershell
 $api = 'http://127.0.0.1:8080'
-$reports = 'http://127.0.0.1:8081'
+$reportingApi = 'http://127.0.0.1:8081'
 $json = 'application/json'
 $demoPassword = 'Demostracion-2027!'
 
@@ -81,7 +85,13 @@ function Get-DemoHeaders($email) {
 
 $admin = Get-DemoHeaders 'admin@example.test'
 $customer = Get-DemoHeaders 'cliente@example.test'
+```
 
+La actualización en PostgreSQL debe mostrar `UPDATE 1`. El administrador publicará el evento y consultará los reportes. El cliente hará la compra.
+
+### 2. Publicar un evento
+
+```powershell
 $eventBody = @{
     name = 'Concierto de prueba'
     description = 'Evento para comprobar el flujo de compra'
@@ -93,15 +103,27 @@ $event = Invoke-RestMethod "$api/events" -Method Post -Headers $admin -ContentTy
 $id = $event.id
 
 Invoke-RestMethod "$api/events/$id/status" -Method Patch -Headers $admin -ContentType $json -Body '{"status":"published"}'
+```
 
+La respuesta debe mostrar `status: published`.
+
+### 3. Comprar entradas y comprobar el reporte
+
+```powershell
 $purchase = @{ event_id = $id; quantity = 2 } | ConvertTo-Json
 Invoke-RestMethod "$api/purchases" -Method Post -Headers $customer -ContentType $json -Body $purchase
 Invoke-RestMethod "$api/events/$id/availability"
-Invoke-RestMethod "$reports/reports/events/$id/sales" -Headers $admin
-Invoke-RestMethod "$reports/reports/sales/summary" -Headers $admin
+Invoke-RestMethod "$reportingApi/reports/events/$id/sales" -Headers $admin
+Invoke-RestMethod "$reportingApi/reports/sales/summary" -Headers $admin
 ```
 
-Queda **1 entrada disponible**. El reporte consultado en .NET devuelve `purchase_count: 1`, `tickets_sold: 2` y `total_revenue: "3000.00"`. Repetir la compra de dos entradas devuelve `409 Conflict`. El cliente puede consultar su historial con `GET /purchases` en el puerto 8080.
+| Consulta | Resultado esperado |
+| --- | --- |
+| Compra | `status: confirmed` y `total_amount: "3000.00"` |
+| Disponibilidad | `available_tickets: 1` |
+| Reportes en .NET | `purchase_count: 1`, `tickets_sold: 2` y `total_revenue: "3000.00"` |
+
+Repetir la compra de dos entradas devuelve `409 Conflict`. El cliente puede consultar su historial con `GET /purchases` en el puerto 8080.
 
 ## Pruebas automatizadas
 
